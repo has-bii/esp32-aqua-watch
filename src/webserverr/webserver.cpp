@@ -380,18 +380,8 @@ void setupWebserver(AsyncWebServer &server, LiquidCrystal_I2C &lcd)
         }
 
         if (WiFi.status() == WL_CONNECTED)
-        {
             LCDPrint(lcd, "Connected!", 2);
-            LCDPrintTop(lcd, WiFi.localIP().toString());
-        }
         else
-        {
             LCDPrint(lcd, "Failed to connect.", 2);
-            LCDPrintTop(lcd, WiFi.softAPIP().toString());
-        }
-    }
-    else
-    {
-        LCDPrintTop(lcd, WiFi.softAPIP().toString());
     }
 }

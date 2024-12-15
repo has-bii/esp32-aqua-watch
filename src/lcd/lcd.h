@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
 
-void LCDPrint(LiquidCrystal_I2C &lcd, const String &text);
+void LCDPrintNoDelay(LiquidCrystal_I2C &lcd, const String &text);
 void LCDPrint(LiquidCrystal_I2C &lcd, const String &text, const int duration = 1);
 void LCDPrintTop(LiquidCrystal_I2C &lcd, const String &text);
 void LCDPrintBot(LiquidCrystal_I2C &lcd, const String &text);
