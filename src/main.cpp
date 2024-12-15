@@ -6,6 +6,8 @@
 #include <webserverr/webserverr.h>
 #include <HTTPClient.h>
 
+const int BOOT_BUTTON = 0;
+
 // Access Point
 const String ssidAP = "Aqua Watch";
 const String passwordAP = "aquawatch";
@@ -33,10 +35,15 @@ const String insert_url = "https://ewlulhkrefobaooxmctt.supabase.co/rest/v1/data
 
 // HTTPClient
 HTTPClient http;
+int httpResponseCode;
 
 // Measurement
 JsonDocument measJson;
 String meas;
+bool disableUpload = false;
+
+// delayy
+int delayy = 1000 * 60;
 
 bool checkUser()
 {
@@ -91,20 +98,73 @@ void getMeasurement()
 
 void printHeapUsage()
 {
-  const int totalHeap = 327680; // Total heap size (adjust based on your ESP32 configuration)
+  Serial.println("Free Heap: " + String(ESP.getFreeHeap()));
+}
 
-  int freeHeap = ESP.getFreeHeap();
-  int usedHeap = totalHeap - freeHeap;
+bool signIn()
+{
+  http.begin(login_url);
 
-  // Calculate percentages
-  float usedPercentage = (usedHeap * 100.0) / totalHeap;
-  float freePercentage = (freeHeap * 100.0) / totalHeap;
+  // Signing to get user_token
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", API_KEY);
 
-  // Print memory usage
-  Serial.println("=== Memory Usage ===");
-  Serial.println("Free Heap: " + String(freeHeap) + " bytes (" + String(freePercentage, 2) + "%)");
-  Serial.println("Used Heap: " + String(usedHeap) + " bytes (" + String(usedPercentage, 2) + "%)");
-  Serial.println("Total Heap: " + String(totalHeap) + " bytes");
+  serializeJson(userJson, userConf);
+
+  // Send the POST request with the body
+  httpResponseCode = http.POST(userConf);
+
+  if (httpResponseCode != 200)
+  {
+    LCDPrint(lcd, "Failed to login!", 2);
+    http.end();
+    return false;
+  }
+
+  String payload = http.getString();
+  JsonDocument response;
+  deserializeJson(response, payload);
+  userToken = response["access_token"].as<String>();
+  response.clear();
+
+  http.end(); // Free resources
+
+  return true;
+}
+
+bool sendData()
+{
+  // Set payload
+  measJson["env_id"] = envJson["id"].as<String>();
+
+  serializeJson(measJson, meas);
+
+  measJson.clear();
+
+  // send temp
+  http.begin(insert_url);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", API_KEY);
+  http.addHeader("Authorization", "Bearer " + userToken);
+
+  LCDPrintTop(lcd, "Sending...");
+
+  // Send the POST request with the body
+  httpResponseCode = http.POST(meas);
+
+  if (httpResponseCode != 201)
+  {
+    LCDPrint(lcd, "Failed to send!", 2);
+    delayy -= 2000;
+    http.end();
+    userToken.clear();
+    return false;
+  }
+
+  LCDPrint(lcd, "Data has been sent", 2);
+  delayy -= 2000;
+  http.end();
+  return true;
 }
 
 void setup()
@@ -137,78 +197,48 @@ void setup()
 
 void loop()
 {
+  if (digitalRead(BOOT_BUTTON) == LOW && !disableUpload)
+  {
+    LCDPrint(lcd, "Disable upload", 2);
+    delayy -= 2000;
+    disableUpload = true;
+  }
+  else
+  {
+    LCDPrint(lcd, "Enable upload", 2);
+    delayy -= 2000;
+    disableUpload = false;
+  }
+
   getMeasurement();
 
-  if (WiFi.status() == WL_CONNECTED)
+  if (WiFi.status() == WL_CONNECTED && !disableUpload)
   {
+    // check user
     if (!checkUser())
       return;
 
-    http.begin(login_url);
-
-    // Signing to get user_token
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("apikey", API_KEY);
-
-    serializeJson(userJson, userConf);
-
-    // Send the POST request with the body
-    int httpResponseCode = http.POST(userConf);
-
-    if (httpResponseCode < 0 || httpResponseCode != 200)
+    // Check userToken
+    if (userToken.isEmpty())
     {
-      LCDPrint(lcd, "Failed to login!", 2);
-      http.end();
-      return;
+      if (!signIn())
+        return;
     }
-
-    String payload = http.getString();
-    JsonDocument response;
-    deserializeJson(response, payload);
-    userToken = response["access_token"].as<String>();
-    response.clear();
-
-    http.end(); // Free resources
 
     // Check env
     if (!checkEnv())
-    {
-      LCDPrint(lcd, "No env saved", 2);
       return;
-    }
 
-    // Set payload
-    measJson["env_id"] = envJson["id"].as<String>();
-
-    serializeJson(measJson, meas);
-
-    measJson.clear();
-
-    // send temp
-    http.begin(insert_url);
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("apikey", API_KEY);
-    http.addHeader("Authorization", "Bearer " + userToken);
-
-    LCDPrintTop(lcd, "Sending...");
-
-    // Send the POST request with the body
-    httpResponseCode = http.POST(meas);
-
-    if (httpResponseCode < 0 || httpResponseCode != 201)
-    {
-      LCDPrint(lcd, "Failed to send!", 2);
-      http.end();
+    // Send data
+    if (!sendData())
       return;
-    }
-
-    LCDPrint(lcd, "Data has been sent", 2);
-    http.end();
   }
 
   getMeasurement();
 
   printHeapUsage();
 
-  delay(60000);
+  delay(delayy);
+  delayy = 60000;
+  Serial.println("Loop");
 }
