@@ -96,11 +96,6 @@ void getMeasurement()
   measJson["temp"] = getTemperature(sensors);
 }
 
-void printHeapUsage()
-{
-  Serial.println("Free Heap: " + String(ESP.getFreeHeap()));
-}
-
 bool signIn()
 {
   http.begin(login_url);
@@ -222,11 +217,21 @@ void printMenu(unsigned long &currentMillis)
     }
     break;
 
+  case 3:
+    lcd.setCursor(0, 0);
+    lcd.print("Free heap: ");
+    lcd.setCursor(10, 0);
+    lcd.print(String((ESP.getFreeHeap() * 100.0) / 327680, 2) + "%");
+    lcd.setCursor(1, 0);
+    lcd.print(String(ESP.getFreeHeap()));
+    break;
+
   default:
     break;
   }
 
   delay(1000);
+  lcd.clear();
 }
 
 void setup()
@@ -269,7 +274,7 @@ void loop()
   {
     menu++;
     lcd.clear();
-    if (menu > 2)
+    if (menu > 3)
       menu = 1;
     lastDebounceTime = currentMillis; // Reset debounce time to avoid repeated message
   }
@@ -300,7 +305,5 @@ void loop()
         return;
       }
     }
-
-    printHeapUsage();
   }
 }
