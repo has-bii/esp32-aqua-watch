@@ -210,7 +210,7 @@ void printMenu(unsigned long &currentMillis)
         lcd.setCursor(0, 0);
         lcd.print(String(wifiiJson["ssid"].as<String>()));
         lcd.setCursor(0, 1);
-        lcd.print(WiFi.softAPIP().toString());
+        lcd.print(WiFi.localIP().toString());
       }
     }
     else
