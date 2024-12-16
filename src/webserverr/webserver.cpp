@@ -142,15 +142,39 @@ void handleWifiStatus(AsyncWebServerRequest *request)
         break;
     }
 
-    resJson["message"] = "Wifi status fetched successfully";
+    // Get wifi config
+    wifiConf = readFileToString("/wifi.json");
 
-    serializeJson(resJson, res);
+    if (wifiConf.isEmpty())
+    {
+        resJson["data"].clear();
+        serializeJson(resJson, res);
+        request->send(200, "application/json", res);
+    }
+    else
+    {
+        DeserializationError error = deserializeJson(wifiJson, wifiConf);
 
-    request->send(200, "application/json", res);
+        if (error)
+        {
+            SPIFFS.remove("/wifi.json");
+
+            resJson["data"].clear();
+            serializeJson(resJson, res);
+            request->send(200, "application/json", res);
+        }
+
+        resJson["data"]["ssid"] = wifiJson["ssid"].as<String>();
+        resJson["data"]["password"] = wifiJson["password"].as<String>();
+
+        serializeJson(resJson, res);
+        request->send(200, "application/json", res);
+    }
 
     resJson.clear();
     res.clear();
-    return;
+    wifiJson.clear();
+    wifiConf.clear();
 }
 
 // Server handler: Restart the device
