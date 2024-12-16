@@ -166,6 +166,7 @@ void handleWifiStatus(AsyncWebServerRequest *request)
 
         resJson["data"]["ssid"] = wifiJson["ssid"].as<String>();
         resJson["data"]["password"] = wifiJson["password"].as<String>();
+        resJson["data"]["ip"] = WiFi.localIP().toString();
 
         serializeJson(resJson, res);
         request->send(200, "application/json", res);
