@@ -221,8 +221,8 @@ void printMenu(unsigned long &currentMillis)
     lcd.setCursor(0, 0);
     lcd.print("Free heap: ");
     lcd.setCursor(10, 0);
-    lcd.print(String((ESP.getFreeHeap() * 100.0) / 327680, 2) + "%");
-    lcd.setCursor(1, 0);
+    lcd.print(String(float((ESP.getFreeHeap() * 100.0) / 327680), 2) + "%");
+    lcd.setCursor(0, 1);
     lcd.print(String(ESP.getFreeHeap()));
     break;
 
@@ -276,7 +276,6 @@ void loop()
     lcd.clear();
     if (menu > 3)
       menu = 1;
-    lastDebounceTime = currentMillis; // Reset debounce time to avoid repeated message
   }
 
   // If the button remains pressed, calculate the hold time
