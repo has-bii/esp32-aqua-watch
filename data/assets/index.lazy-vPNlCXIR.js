@@ -1,0 +1,1 @@
+import{c as t,j as e}from"./index-BZ7jhzs-.js";const s=t("/")({component:c});function c(){return e.jsx("div",{className:"w-full flex items-center justify-center px-8",children:e.jsx("h1",{className:"text-3xl font-bold text-black",children:"Aqua Watch"})})}export{s as Route};

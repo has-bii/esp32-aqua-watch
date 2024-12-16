@@ -42,10 +42,6 @@ JsonDocument measJson;
 String meas;
 bool disableUpload = false;
 
-// WiFi
-JsonDocument wifiiJson;
-String wifiiConf;
-
 // Delay
 unsigned long lastLoopTime = 0;
 const int loopInterval = 60000; // 60 seconds
@@ -60,6 +56,7 @@ int menu = 1;
 
 bool checkUser()
 {
+  Serial.println("Checking user");
   String userConf = readFileToString("/user.json");
   if (userConf.isEmpty())
     return false;
@@ -77,6 +74,7 @@ bool checkUser()
 
 bool checkEnv()
 {
+  Serial.println("Checking Env");
   String envConf = readFileToString("/environment.json");
   if (envConf.isEmpty())
     return false;
@@ -98,6 +96,7 @@ void getMeasurement()
 
 bool signIn()
 {
+  Serial.println("Signing in...");
   http.begin(login_url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("apikey", API_KEY);
@@ -129,6 +128,7 @@ bool signIn()
 
 bool sendData()
 {
+  Serial.println("Sending data");
   if (!envJson["id"].is<String>())
   {
     LCDPrint(lcd, "Env ID missing!", 2);
@@ -194,16 +194,13 @@ void printMenu(unsigned long &currentMillis)
     if (WiFi.status() == WL_CONNECTED)
     {
 
-      if (wifiiConf.isEmpty())
-      {
-        wifiiConf = readFileToString("/wifi.json");
-        deserializeJson(wifiiJson, wifiiConf);
-      }
+      wifiConf = readFileToString("/wifi.json");
+      deserializeJson(wifiJson, wifiConf);
 
-      if (wifiiJson["ssid"].is<String>())
+      if (wifiJson["ssid"].is<String>())
       {
         lcd.setCursor(0, 0);
-        lcd.print(String(wifiiJson["ssid"].as<String>()));
+        lcd.print(String(wifiJson["ssid"].as<String>()));
         lcd.setCursor(0, 1);
         lcd.print(WiFi.localIP().toString());
       }
@@ -232,6 +229,32 @@ void printMenu(unsigned long &currentMillis)
 
   delay(1000);
   lcd.clear();
+}
+
+void connectWifi()
+{
+  wifiConf = readFileToString("/wifi.json");
+  if (!wifiConf.isEmpty())
+  {
+    deserializeJson(wifiJson, wifiConf);
+
+    if (wifiJson["ssid"].is<String>() && wifiJson["password"].is<String>())
+    {
+      WiFi.begin(wifiJson["ssid"].as<String>(), wifiJson["password"].as<String>());
+
+      int retryCount = 0;
+      while (WiFi.status() != WL_CONNECTED && retryCount < 10)
+      {
+        retryCount++;
+        LCDPrint(lcd, "Connecting... " + String(retryCount), 1);
+      }
+
+      if (WiFi.status() == WL_CONNECTED)
+        LCDPrint(lcd, "Connected!", 2);
+      else
+        LCDPrint(lcd, "Failed to connect.", 2);
+    }
+  }
 }
 
 void setup()
@@ -304,5 +327,7 @@ void loop()
         return;
       }
     }
+    else
+      connectWifi();
   }
 }

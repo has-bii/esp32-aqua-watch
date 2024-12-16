@@ -14,6 +14,9 @@ extern String userConf;
 extern JsonDocument envJson;
 extern String envConf;
 
+extern JsonDocument wifiJson;
+extern String wifiConf;
+
 void setupWebserver(AsyncWebServer &server, LiquidCrystal_I2C &lcd);
 
 #endif
